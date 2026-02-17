@@ -1,0 +1,6 @@
+{"index":{}}
+{"@timestamp":"2026-02-17T14:30:00.000Z","event_type":"alert","src_ip":"10.0.0.50","src_port":54321,"dest_ip":"192.168.1.100","dest_port":443,"proto":"TCP","alert":{"action":"allowed","gid":1,"signature_id":2024001,"rev":1,"signature":"ET MALWARE Suspicious SSL Certificate","category":"Potentially Bad Traffic","severity":2},"mitre":{"tactic":"Initial Access","technique":"T1566"}}
+{"index":{}}
+{"@timestamp":"2026-02-17T14:31:00.000Z","event_type":"alert","src_ip":"192.168.1.50","src_port":12345,"dest_ip":"45.33.32.156","dest_port":4444,"proto":"TCP","alert":{"action":"allowed","gid":1,"signature_id":2024002,"rev":1,"signature":"ET TROJAN CobaltStrike Beacon Activity","category":"A Network Trojan was Detected","severity":1},"mitre":{"tactic":"Command and Control","technique":"T1071"}}
+{"index":{}}
+{"@timestamp":"2026-02-17T14:32:00.000Z","event_type":"alert","src_ip":"10.0.0.100","src_port":8080,"dest_ip":"192.168.1.1","dest_port":53,"proto":"UDP","alert":{"action":"allowed","gid":1,"signature_id":2024003,"rev":1,"signature":"ET DNS Query to .tk Domain","category":"Potentially Bad Traffic","severity":3},"mitre":{"tactic":"Command and Control","technique":"T1071.004"}}

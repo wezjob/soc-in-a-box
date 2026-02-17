@@ -1,0 +1,175 @@
+# ============================================================================
+# LabSOC Home - Suricata Detection Rules - MITRE ATT&CK Mapped
+# ============================================================================
+# Reference: https://attack.mitre.org/
+# Each rule includes MITRE ATT&CK technique mapping in metadata
+# ============================================================================
+
+# ============================================================================
+# RECONNAISSANCE (TA0043)
+# ============================================================================
+
+# T1595.001 - Scanning IP Blocks
+alert tcp any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1595.001 Active Scanning IP Blocks - Nmap SYN Scan"; flags:S; threshold:type threshold, track by_src, count 50, seconds 10; classtype:attempted-recon; sid:1000001; rev:1; metadata:mitre_tactic_id TA0043, mitre_tactic_name Reconnaissance, mitre_technique_id T1595.001, mitre_technique_name "Scanning IP Blocks";)
+
+# T1595.002 - Vulnerability Scanning
+alert tcp any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1595.002 Vulnerability Scanning - Nikto User Agent"; flow:to_server,established; http.user_agent; content:"Nikto"; nocase; classtype:web-application-attack; sid:1000002; rev:1; metadata:mitre_tactic_id TA0043, mitre_tactic_name Reconnaissance, mitre_technique_id T1595.002, mitre_technique_name "Vulnerability Scanning";)
+
+# T1592 - Gather Victim Host Information
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1592 Gather Victim Host Info - WhatWeb Scanner"; flow:to_server,established; http.user_agent; content:"WhatWeb"; nocase; classtype:attempted-recon; sid:1000003; rev:1; metadata:mitre_tactic_id TA0043, mitre_tactic_name Reconnaissance, mitre_technique_id T1592, mitre_technique_name "Gather Victim Host Information";)
+
+# ============================================================================
+# INITIAL ACCESS (TA0001)
+# ============================================================================
+
+# T1566.001 - Spearphishing Attachment
+alert smtp any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1566.001 Spearphishing - Suspicious Attachment"; flow:to_server,established; file.data; content:".exe"; nocase; classtype:trojan-activity; sid:1000010; rev:1; metadata:mitre_tactic_id TA0001, mitre_tactic_name "Initial Access", mitre_technique_id T1566.001, mitre_technique_name "Spearphishing Attachment";)
+
+# T1566.002 - Spearphishing Link
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1566.002 Spearphishing Link - URL Shortener"; flow:to_server,established; http.host; content:"bit.ly"; classtype:policy-violation; sid:1000011; rev:1; metadata:mitre_tactic_id TA0001, mitre_tactic_name "Initial Access", mitre_technique_id T1566.002, mitre_technique_name "Spearphishing Link";)
+
+# T1190 - Exploit Public-Facing Application
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1190 SQL Injection Attempt"; flow:to_server,established; http.uri; content:"UNION"; nocase; content:"SELECT"; nocase; distance:0; within:20; classtype:web-application-attack; sid:1000012; rev:1; metadata:mitre_tactic_id TA0001, mitre_tactic_name "Initial Access", mitre_technique_id T1190, mitre_technique_name "Exploit Public-Facing Application";)
+
+# T1190 - Log4j/Log4Shell Exploitation
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1190 Log4Shell Exploitation Attempt"; flow:to_server,established; content:"${jndi:"; nocase; classtype:attempted-admin; sid:1000013; rev:1; metadata:mitre_tactic_id TA0001, mitre_tactic_name "Initial Access", mitre_technique_id T1190, mitre_technique_name "Exploit Public-Facing Application", cve CVE-2021-44228;)
+
+# ============================================================================
+# EXECUTION (TA0002)
+# ============================================================================
+
+# T1059.001 - PowerShell
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1059.001 PowerShell Download Cradle"; flow:to_server,established; content:"powershell"; nocase; content:"IEX"; nocase; classtype:trojan-activity; sid:1000020; rev:1; metadata:mitre_tactic_id TA0002, mitre_tactic_name Execution, mitre_technique_id T1059.001, mitre_technique_name "PowerShell";)
+
+# T1059.003 - Windows Command Shell
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1059.003 CMD Execution via HTTP"; flow:to_server,established; content:"cmd.exe"; nocase; content:"/c"; nocase; classtype:trojan-activity; sid:1000021; rev:1; metadata:mitre_tactic_id TA0002, mitre_tactic_name Execution, mitre_technique_id T1059.003, mitre_technique_name "Windows Command Shell";)
+
+# T1059.005 - Visual Basic
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1059.005 VBS Script Download"; flow:to_server,established; http.uri; content:".vbs"; nocase; classtype:trojan-activity; sid:1000022; rev:1; metadata:mitre_tactic_id TA0002, mitre_tactic_name Execution, mitre_technique_id T1059.005, mitre_technique_name "Visual Basic";)
+
+# ============================================================================
+# PERSISTENCE (TA0003)
+# ============================================================================
+
+# T1505.003 - Web Shell
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1505.003 Web Shell Activity - cmd"; flow:to_server,established; http.uri; content:"cmd="; classtype:web-application-attack; sid:1000030; rev:1; metadata:mitre_tactic_id TA0003, mitre_tactic_name Persistence, mitre_technique_id T1505.003, mitre_technique_name "Web Shell";)
+
+# T1505.003 - China Chopper Web Shell
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1505.003 China Chopper Web Shell"; flow:to_server,established; content:"eval"; nocase; content:"base64_decode"; nocase; classtype:web-application-attack; sid:1000031; rev:1; metadata:mitre_tactic_id TA0003, mitre_tactic_name Persistence, mitre_technique_id T1505.003, mitre_technique_name "Web Shell";)
+
+# ============================================================================
+# PRIVILEGE ESCALATION (TA0004)
+# ============================================================================
+
+# T1068 - Exploitation for Privilege Escalation
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1068 Kernel Exploit Attempt"; flow:to_server,established; content:"kernel"; nocase; content:"exploit"; nocase; classtype:attempted-admin; sid:1000040; rev:1; metadata:mitre_tactic_id TA0004, mitre_tactic_name "Privilege Escalation", mitre_technique_id T1068, mitre_technique_name "Exploitation for Privilege Escalation";)
+
+# ============================================================================
+# DEFENSE EVASION (TA0005)
+# ============================================================================
+
+# T1071.001 - Application Layer Protocol: Web
+alert http any any -> any any (msg:"MITRE ATT&CK - T1071.001 Suspicious User Agent"; flow:to_server,established; http.user_agent; content:"Mozilla/4.0"; content:"compatible"; http.method; content:"POST"; classtype:trojan-activity; sid:1000050; rev:1; metadata:mitre_tactic_id TA0005, mitre_tactic_name "Defense Evasion", mitre_technique_id T1071.001, mitre_technique_name "Web Protocols";)
+
+# T1027 - Obfuscated Files or Information
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1027 Base64 Encoded Payload"; flow:to_server,established; http.request_body; content:"TVq"; content:"AAA"; distance:0; within:20; classtype:trojan-activity; sid:1000051; rev:1; metadata:mitre_tactic_id TA0005, mitre_tactic_name "Defense Evasion", mitre_technique_id T1027, mitre_technique_name "Obfuscated Files or Information";)
+
+# ============================================================================
+# CREDENTIAL ACCESS (TA0006)
+# ============================================================================
+
+# T1110.001 - Brute Force: Password Guessing
+alert tcp any any -> $HOME_NET 22 (msg:"MITRE ATT&CK - T1110.001 SSH Brute Force"; flow:to_server; flags:S; threshold:type threshold, track by_src, count 10, seconds 60; classtype:attempted-admin; sid:1000060; rev:1; metadata:mitre_tactic_id TA0006, mitre_tactic_name "Credential Access", mitre_technique_id T1110.001, mitre_technique_name "Password Guessing";)
+
+# T1110.001 - RDP Brute Force
+alert tcp any any -> $HOME_NET 3389 (msg:"MITRE ATT&CK - T1110.001 RDP Brute Force"; flow:to_server; flags:S; threshold:type threshold, track by_src, count 10, seconds 60; classtype:attempted-admin; sid:1000061; rev:1; metadata:mitre_tactic_id TA0006, mitre_tactic_name "Credential Access", mitre_technique_id T1110.001, mitre_technique_name "Password Guessing";)
+
+# T1557.001 - LLMNR/NBT-NS Poisoning
+alert udp any any -> any 5355 (msg:"MITRE ATT&CK - T1557.001 LLMNR Query Detected"; content:"|00 00|"; offset:2; depth:2; classtype:policy-violation; sid:1000062; rev:1; metadata:mitre_tactic_id TA0006, mitre_tactic_name "Credential Access", mitre_technique_id T1557.001, mitre_technique_name "LLMNR/NBT-NS Poisoning";)
+
+# ============================================================================
+# DISCOVERY (TA0007)
+# ============================================================================
+
+# T1046 - Network Service Discovery
+alert tcp any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1046 Port Scan Detected"; flags:S; threshold:type threshold, track by_src, count 100, seconds 60; classtype:attempted-recon; sid:1000070; rev:1; metadata:mitre_tactic_id TA0007, mitre_tactic_name Discovery, mitre_technique_id T1046, mitre_technique_name "Network Service Discovery";)
+
+# T1018 - Remote System Discovery
+alert icmp any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1018 ICMP Sweep Detected"; itype:8; threshold:type threshold, track by_src, count 20, seconds 10; classtype:attempted-recon; sid:1000071; rev:1; metadata:mitre_tactic_id TA0007, mitre_tactic_name Discovery, mitre_technique_id T1018, mitre_technique_name "Remote System Discovery";)
+
+# ============================================================================
+# LATERAL MOVEMENT (TA0008)
+# ============================================================================
+
+# T1021.001 - Remote Desktop Protocol
+alert tcp any any -> $HOME_NET 3389 (msg:"MITRE ATT&CK - T1021.001 RDP Connection"; flow:to_server,established; content:"|03 00|"; offset:0; depth:2; classtype:policy-violation; sid:1000080; rev:1; metadata:mitre_tactic_id TA0008, mitre_tactic_name "Lateral Movement", mitre_technique_id T1021.001, mitre_technique_name "Remote Desktop Protocol";)
+
+# T1021.002 - SMB/Windows Admin Shares
+alert tcp any any -> $HOME_NET 445 (msg:"MITRE ATT&CK - T1021.002 SMB Admin Share Access - ADMIN$"; flow:to_server,established; content:"ADMIN$|24|"; nocase; classtype:policy-violation; sid:1000081; rev:1; metadata:mitre_tactic_id TA0008, mitre_tactic_name "Lateral Movement", mitre_technique_id T1021.002, mitre_technique_name "SMB/Windows Admin Shares";)
+
+# T1021.006 - Windows Remote Management
+alert tcp any any -> $HOME_NET 5985 (msg:"MITRE ATT&CK - T1021.006 WinRM Connection"; flow:to_server,established; classtype:policy-violation; sid:1000082; rev:1; metadata:mitre_tactic_id TA0008, mitre_tactic_name "Lateral Movement", mitre_technique_id T1021.006, mitre_technique_name "Windows Remote Management";)
+
+# ============================================================================
+# COLLECTION (TA0009)
+# ============================================================================
+
+# T1560.001 - Archive via Utility
+alert http $HOME_NET any -> any any (msg:"MITRE ATT&CK - T1560.001 Large Archive Upload"; flow:to_server,established; http.method; content:"POST"; filesize:>10000000; classtype:policy-violation; sid:1000090; rev:1; metadata:mitre_tactic_id TA0009, mitre_tactic_name Collection, mitre_technique_id T1560.001, mitre_technique_name "Archive via Utility";)
+
+# ============================================================================
+# COMMAND AND CONTROL (TA0011)
+# ============================================================================
+
+# T1071.001 - Web Protocols
+alert http $HOME_NET any -> any any (msg:"MITRE ATT&CK - T1071.001 HTTP Beacon Interval"; flow:to_server,established; http.method; content:"GET"; threshold:type threshold, track by_src, count 60, seconds 60; classtype:trojan-activity; sid:1000100; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1071.001, mitre_technique_name "Web Protocols";)
+
+# T1071.004 - DNS
+alert dns any any -> any any (msg:"MITRE ATT&CK - T1071.004 DNS Tunneling - Long Query"; dns.query; content:"."; pcre:"/^.{50,}/"; classtype:trojan-activity; sid:1000101; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1071.004, mitre_technique_name "DNS";)
+
+# T1071.004 - Suspicious TLD DNS Query
+alert dns any any -> any any (msg:"MITRE ATT&CK - T1071.004 DNS Query to .tk Domain"; dns.query; content:".tk"; endswith; classtype:bad-unknown; sid:1000102; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1071.004, mitre_technique_name "DNS";)
+
+# T1572 - Protocol Tunneling
+alert tcp any any -> any 443 (msg:"MITRE ATT&CK - T1572 SSH over HTTPS Port"; flow:to_server,established; content:"SSH-"; offset:0; depth:4; classtype:policy-violation; sid:1000103; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1572, mitre_technique_name "Protocol Tunneling";)
+
+# T1095 - Non-Application Layer Protocol
+alert icmp any any -> any any (msg:"MITRE ATT&CK - T1095 ICMP Tunnel - Large Payload"; itype:8; dsize:>100; classtype:trojan-activity; sid:1000104; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1095, mitre_technique_name "Non-Application Layer Protocol";)
+
+# T1219 - Remote Access Software
+alert http any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1219 TeamViewer Connection"; flow:to_server,established; http.host; content:"teamviewer.com"; classtype:policy-violation; sid:1000105; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1219, mitre_technique_name "Remote Access Software";)
+
+# T1571 - Non-Standard Port
+alert tcp $HOME_NET any -> any !80 (msg:"MITRE ATT&CK - T1571 HTTP on Non-Standard Port"; flow:to_server,established; content:"HTTP/1"; depth:7; classtype:policy-violation; sid:1000106; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1571, mitre_technique_name "Non-Standard Port";)
+
+# CobaltStrike Beacon
+alert http any any -> any any (msg:"MITRE ATT&CK - T1071.001 CobaltStrike Beacon"; flow:to_server,established; http.uri; content:"/pixel"; content:".gif"; distance:0; within:10; http.cookie; content:"SESSIONID="; classtype:trojan-activity; sid:1000107; rev:1; metadata:mitre_tactic_id TA0011, mitre_tactic_name "Command and Control", mitre_technique_id T1071.001, mitre_technique_name "Web Protocols", malware_family CobaltStrike;)
+
+# ============================================================================
+# EXFILTRATION (TA0010)
+# ============================================================================
+
+# T1041 - Exfiltration Over C2 Channel
+alert http $HOME_NET any -> any any (msg:"MITRE ATT&CK - T1041 Large HTTP POST - Potential Exfiltration"; flow:to_server,established; http.method; content:"POST"; http.content_len; content:">1000000"; classtype:policy-violation; sid:1000110; rev:1; metadata:mitre_tactic_id TA0010, mitre_tactic_name Exfiltration, mitre_technique_id T1041, mitre_technique_name "Exfiltration Over C2 Channel";)
+
+# T1048.003 - Exfiltration Over Unencrypted Protocol
+alert tcp $HOME_NET any -> any 21 (msg:"MITRE ATT&CK - T1048.003 FTP Data Transfer"; flow:to_server,established; content:"STOR"; nocase; classtype:policy-violation; sid:1000111; rev:1; metadata:mitre_tactic_id TA0010, mitre_tactic_name Exfiltration, mitre_technique_id T1048.003, mitre_technique_name "Exfiltration Over Unencrypted Protocol";)
+
+# T1567.002 - Exfiltration to Cloud Storage
+alert http $HOME_NET any -> any any (msg:"MITRE ATT&CK - T1567.002 Exfil to Dropbox"; flow:to_server,established; http.host; content:"dropbox.com"; http.method; content:"POST"; classtype:policy-violation; sid:1000112; rev:1; metadata:mitre_tactic_id TA0010, mitre_tactic_name Exfiltration, mitre_technique_id T1567.002, mitre_technique_name "Exfiltration to Cloud Storage";)
+
+# T1567.002 - Exfiltration to Google Drive
+alert http $HOME_NET any -> any any (msg:"MITRE ATT&CK - T1567.002 Exfil to Google Drive"; flow:to_server,established; http.host; content:"drive.google.com"; http.method; content:"POST"; classtype:policy-violation; sid:1000113; rev:1; metadata:mitre_tactic_id TA0010, mitre_tactic_name Exfiltration, mitre_technique_id T1567.002, mitre_technique_name "Exfiltration to Cloud Storage";)
+
+# ============================================================================
+# IMPACT (TA0040)
+# ============================================================================
+
+# T1486 - Data Encrypted for Impact (Ransomware)
+alert smb any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1486 Ransomware Extension - .encrypted"; content:".encrypted"; nocase; classtype:trojan-activity; sid:1000120; rev:1; metadata:mitre_tactic_id TA0040, mitre_tactic_name Impact, mitre_technique_id T1486, mitre_technique_name "Data Encrypted for Impact";)
+
+# T1486 - Known Ransomware Extensions
+alert smb any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1486 Ransomware Extension - .locky"; content:".locky"; nocase; classtype:trojan-activity; sid:1000121; rev:1; metadata:mitre_tactic_id TA0040, mitre_tactic_name Impact, mitre_technique_id T1486, mitre_technique_name "Data Encrypted for Impact";)
+
+# T1498 - Network Denial of Service
+alert tcp any any -> $HOME_NET any (msg:"MITRE ATT&CK - T1498 SYN Flood Detected"; flags:S; threshold:type threshold, track by_dst, count 1000, seconds 10; classtype:attempted-dos; sid:1000122; rev:1; metadata:mitre_tactic_id TA0040, mitre_tactic_name Impact, mitre_technique_id T1498, mitre_technique_name "Network Denial of Service";)

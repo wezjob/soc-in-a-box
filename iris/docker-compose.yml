@@ -1,0 +1,166 @@
+# ============================================================================
+# IRIS DFIR - Docker Compose Configuration
+# Digital Forensics and Incident Response Platform
+# https://github.com/dfir-iris/iris-web
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # IRIS Web Application
+  # ==========================================================================
+  iris-web:
+    image: ghcr.io/dfir-iris/iriswebapp_app:v2.4.9
+    container_name: iris-web
+    restart: unless-stopped
+    environment:
+      # Database configuration
+      - POSTGRES_USER=iris
+      - POSTGRES_PASSWORD=IrisLabSoc2026!
+      - POSTGRES_ADMIN_USER=iris
+      - POSTGRES_ADMIN_PASSWORD=IrisLabSoc2026!
+      - POSTGRES_SERVER=iris-db
+      - POSTGRES_PORT=5432
+      
+      # IRIS configuration
+      - IRIS_SECRET_KEY=LabSocIrisSecretKey2026RandomString
+      - IRIS_SECURITY_PASSWORD_SALT=LabSocIrisSalt2026
+      - IRIS_UPSTREAM_SERVER=http://iris-web:8000
+      - IRIS_UPSTREAM_PORT=8000
+      - IRIS_DEMO_DOMAIN=labsoc.local
+      
+      # Authentication
+      - IRIS_ADM_USERNAME=administrator
+      - IRIS_ADM_PASSWORD=IrisAdmin2026!
+      - IRIS_ADM_EMAIL=admin@labsoc.local
+      
+      # Celery/Redis
+      - CELERY_BROKER_URL=redis://iris-redis:6379/0
+      
+      # Email (optional)
+      - IRIS_SMTP_SERVER=
+      - IRIS_SMTP_PORT=587
+      - IRIS_SMTP_USER=
+      - IRIS_SMTP_PASSWORD=
+      
+    volumes:
+      - iris-data:/home/iris/data
+      - iris-uploads:/home/iris/uploads
+      - iris-logs:/var/log/iris
+    ports:
+      - "8443:443"
+      - "8001:8000"
+    networks:
+      - labsoc-network
+    depends_on:
+      - iris-db
+      - iris-redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================================================
+  # IRIS Database (PostgreSQL)
+  # ==========================================================================
+  iris-db:
+    image: postgres:14
+    container_name: iris-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=iris
+      - POSTGRES_PASSWORD=IrisLabSoc2026!
+      - POSTGRES_DB=iris_db
+    volumes:
+      - iris-postgres-data:/var/lib/postgresql/data
+    networks:
+      - labsoc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iris -d iris_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # IRIS Redis (for Celery task queue)
+  # ==========================================================================
+  iris-redis:
+    image: redis:7-alpine
+    container_name: iris-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - iris-redis-data:/data
+    networks:
+      - labsoc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # IRIS Worker (Celery background tasks)
+  # ==========================================================================
+  iris-worker:
+    image: ghcr.io/dfir-iris/iriswebapp_worker:v2.4.9
+    container_name: iris-worker
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=iris
+      - POSTGRES_PASSWORD=IrisLabSoc2026!
+      - POSTGRES_ADMIN_USER=iris
+      - POSTGRES_ADMIN_PASSWORD=IrisLabSoc2026!
+      - POSTGRES_SERVER=iris-db
+      - POSTGRES_PORT=5432
+      - CELERY_BROKER_URL=redis://iris-redis:6379/0
+      - IRIS_SECRET_KEY=LabSocIrisSecretKey2026RandomString
+    volumes:
+      - iris-data:/home/iris/data
+      - iris-uploads:/home/iris/uploads
+    networks:
+      - labsoc-network
+    depends_on:
+      - iris-db
+      - iris-redis
+
+  # ==========================================================================
+  # IRIS Nginx Reverse Proxy
+  # ==========================================================================
+  iris-nginx:
+    image: ghcr.io/dfir-iris/iriswebapp_nginx:v2.4.9
+    container_name: iris-nginx
+    restart: unless-stopped
+    environment:
+      - IRIS_UPSTREAM_SERVER=iris-web
+      - IRIS_UPSTREAM_PORT=8000
+    ports:
+      - "8444:443"
+    networks:
+      - labsoc-network
+    depends_on:
+      - iris-web
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  iris-data:
+    driver: local
+  iris-uploads:
+    driver: local
+  iris-logs:
+    driver: local
+  iris-postgres-data:
+    driver: local
+  iris-redis-data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  labsoc-network:
+    external: true

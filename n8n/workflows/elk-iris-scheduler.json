@@ -1,0 +1,231 @@
+{
+  "name": "LabSOC - ELK Alert Monitor to IRIS",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://elasticsearch:9200/suricata-*,labsoc-alerts*/_search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"now-5m\",\n              \"lte\": \"now\"\n            }\n          }\n        },\n        {\n          \"bool\": {\n            \"should\": [\n              { \"match\": { \"alert.severity\": 1 } },\n              { \"match\": { \"severity\": \"critical\" } },\n              { \"match\": { \"severity\": \"high\" } }\n            ]\n          }\n        }\n      ],\n      \"must_not\": [\n        {\n          \"exists\": {\n            \"field\": \"iris_synced\"\n          }\n        }\n      ]\n    }\n  },\n  \"size\": 50,\n  \"sort\": [\n    { \"@timestamp\": \"desc\" }\n  ]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "query-elk-alerts",
+      "name": "Query ELK for New Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "elasticsearch",
+          "name": "Elasticsearch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-hits",
+              "leftValue": "={{ $json.hits?.hits?.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-results",
+      "name": "Has Alerts?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hits = $input.first().json.hits?.hits || [];\n\nreturn hits.map(hit => {\n  const source = hit._source;\n  return {\n    json: {\n      _id: hit._id,\n      _index: hit._index,\n      timestamp: source['@timestamp'],\n      severity: source.alert?.severity === 1 ? 'critical' : (source.severity || 'high'),\n      rule_name: source.alert?.signature || source.rule_name || 'Unknown Alert',\n      category: source.alert?.category || source.category,\n      src_ip: source.src_ip || source.source_ip,\n      dest_ip: source.dest_ip || source.destination_ip,\n      src_port: source.src_port || source.source_port,\n      dest_port: source.dest_port || source.destination_port,\n      proto: source.proto || source.protocol,\n      mitre: source.mitre || {},\n      raw_alert: source\n    }\n  };\n});"
+      },
+      "id": "split-alerts",
+      "name": "Split Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/elk-to-iris",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "send-to-iris-workflow",
+      "name": "Send to IRIS Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://elasticsearch:9200/{{ $('Split Alerts').item.json._index }}/_update/{{ $('Split Alerts').item.json._id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"doc\": {\n    \"iris_synced\": true,\n    \"iris_synced_at\": \"{{ new Date().toISOString() }}\"\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "mark-synced",
+      "name": "Mark as Synced in ELK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "elasticsearch",
+          "name": "Elasticsearch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "no-alerts",
+              "name": "status",
+              "value": "no_new_alerts",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "no-alerts",
+      "name": "No New Alerts",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [860, 500]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Query ELK for New Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query ELK for New Alerts": {
+      "main": [
+        [
+          {
+            "node": "Has Alerts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Alerts?": {
+      "main": [
+        [
+          {
+            "node": "Split Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Alerts": {
+      "main": [
+        [
+          {
+            "node": "Send to IRIS Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to IRIS Workflow": {
+      "main": [
+        [
+          {
+            "node": "Mark as Synced in ELK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DFIR"
+    },
+    {
+      "name": "IRIS"
+    },
+    {
+      "name": "ELK"
+    },
+    {
+      "name": "Scheduler"
+    }
+  ],
+  "meta": {
+    "templateId": "labsoc-elk-iris-scheduler"
+  }
+}

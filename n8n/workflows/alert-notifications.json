@@ -1,0 +1,254 @@
+{
+  "name": "LabSOC - Alert Notifications (Slack + Email)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "labsoc-notify",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Receive Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "labsoc-notify-webhook"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "alert_id",
+              "value": "={{ $json.body.alert_id || $json.body._id || 'ALERT-' + $now.format('yyyyMMdd-HHmmss') }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.body.event?.severity || $json.body.severity || 'medium' }}"
+            },
+            {
+              "name": "rule_name",
+              "value": "={{ $json.body.rule?.name || $json.body.rule_name || 'Unknown Rule' }}"
+            },
+            {
+              "name": "source_ip",
+              "value": "={{ $json.body.source?.ip || $json.body.source_ip || 'N/A' }}"
+            },
+            {
+              "name": "dest_ip",
+              "value": "={{ $json.body.destination?.ip || $json.body.dest_ip || 'N/A' }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.body.message || 'No message' }}"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.body.labsoc?.source || $json.body.source || 'unknown' }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.body['@timestamp'] || $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "parse",
+      "name": "Parse Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-critical",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "is-high",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "check-severity",
+      "name": "Is Critical/High?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "sendTo": "={{ $env.ALERT_EMAIL || 'soc-team@example.com' }}",
+        "subject": "=🚨 [{{ $json.severity.toUpperCase() }}] LabSOC Alert: {{ $json.rule_name }}",
+        "message": "=<h2>🚨 Security Alert - {{ $json.severity.toUpperCase() }}</h2>\n\n<table style=\"border-collapse: collapse; width: 100%;\">\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Alert ID</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.alert_id }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Severity</strong></td><td style=\"padding: 8px; border: 1px solid #ddd; color: {{ $json.severity === 'critical' ? 'red' : 'orange' }};\">{{ $json.severity.toUpperCase() }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Rule</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.rule_name }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Source</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.source }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Source IP</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.source_ip }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Destination IP</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.dest_ip }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Timestamp</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.timestamp }}</td></tr>\n<tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Message</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">{{ $json.message }}</td></tr>\n</table>\n\n<p><a href=\"http://localhost:5601/app/discover\">View in Kibana</a></p>",
+        "options": {}
+      },
+      "id": "gmail",
+      "name": "Send Gmail Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [700, -100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-creds",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $env.SLACK_CHANNEL || 'security-alerts' }}",
+          "mode": "name"
+        },
+        "text": "=:rotating_light: *{{ $json.severity.toUpperCase() }} SECURITY ALERT*\n\n*Alert ID:* `{{ $json.alert_id }}`\n*Rule:* {{ $json.rule_name }}\n*Source:* {{ $json.source }}\n*Severity:* {{ $json.severity }}\n\n*Source IP:* `{{ $json.source_ip }}`\n*Destination IP:* `{{ $json.dest_ip }}`\n\n*Message:* {{ $json.message }}\n\n*Timestamp:* {{ $json.timestamp }}\n\n<http://localhost:5601/app/discover|:kibana: View in Kibana>",
+        "otherOptions": {}
+      },
+      "id": "slack",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [700, 100],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack-creds",
+          "name": "Slack"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://elasticsearch:9200/labsoc-notifications/_doc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"@timestamp\": \"{{ $now.toISO() }}\",\n  \"notification\": {\n    \"type\": \"alert\",\n    \"channels\": [\"slack\", \"email\"],\n    \"sent\": true\n  },\n  \"alert\": {\n    \"id\": \"{{ $json.alert_id }}\",\n    \"severity\": \"{{ $json.severity }}\",\n    \"rule_name\": \"{{ $json.rule_name }}\"\n  },\n  \"source\": { \"ip\": \"{{ $json.source_ip }}\" },\n  \"destination\": { \"ip\": \"{{ $json.dest_ip }}\" },\n  \"message\": \"{{ $json.message }}\",\n  \"labsoc\": {\n    \"source\": \"n8n\",\n    \"workflow\": \"alert-notifications\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log-notification",
+      "name": "Log Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "elastic-creds",
+          "name": "Elasticsearch"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "low-severity",
+      "name": "Low Severity - No Notification",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [700, 250]
+    }
+  ],
+  "connections": {
+    "Receive Alert": {
+      "main": [
+        [
+          {
+            "node": "Parse Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Alert": {
+      "main": [
+        [
+          {
+            "node": "Is Critical/High?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Critical/High?": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Low Severity - No Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Gmail Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["labsoc", "notifications", "slack", "gmail"],
+  "triggerCount": 1,
+  "active": false
+}

@@ -1,0 +1,299 @@
+{
+  "name": "LabSOC - ELK to IRIS DFIR Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "elk-to-iris",
+        "options": {}
+      },
+      "id": "webhook-elk-alert",
+      "name": "ELK Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "elk-to-iris-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "severity-check",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "check-severity",
+      "name": "Check Alert Severity",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ \n  const alert = $json;\n  const now = new Date();\n  const caseId = `CASE-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;\n  \n  return {\n    case_name: `[${alert.severity?.toUpperCase() || 'HIGH'}] ${alert.rule_name || alert.alert?.signature || 'Security Alert'}`,\n    case_description: `**Alert Details**\\n\\n- **Source**: ${alert.source || 'ELK Stack'}\\n- **Rule**: ${alert.rule_name || alert.alert?.signature || 'Unknown'}\\n- **Source IP**: ${alert.src_ip || alert.source_ip || 'N/A'}\\n- **Destination IP**: ${alert.dest_ip || alert.destination_ip || 'N/A'}\\n- **Timestamp**: ${alert['@timestamp'] || alert.timestamp || now.toISOString()}\\n\\n**MITRE ATT&CK**\\n- Tactic: ${alert.mitre?.tactic || 'Unknown'}\\n- Technique: ${alert.mitre?.technique || 'Unknown'}\\n\\n**Raw Alert**\\n\\`\\`\\`json\\n${JSON.stringify(alert, null, 2)}\\n\\`\\`\\``,\n    case_customer: 1,\n    case_soc_id: caseId,\n    case_classification_id: alert.severity === 'critical' ? 1 : 2,\n    custom_attributes: {\n      source_ip: alert.src_ip || alert.source_ip,\n      dest_ip: alert.dest_ip || alert.destination_ip,\n      mitre_technique: alert.mitre?.technique,\n      alert_id: alert.alert_id || alert._id\n    }\n  };\n}}"
+      },
+      "id": "prepare-iris-case",
+      "name": "Prepare IRIS Case",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://localhost:8443/case/add",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 30000
+        }
+      },
+      "id": "create-iris-case",
+      "name": "Create IRIS Case",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iris-api",
+          "name": "IRIS API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ \n  const alert = $('ELK Alert Webhook').item.json;\n  const irisCase = $json;\n  \n  const iocs = [];\n  \n  if (alert.src_ip || alert.source_ip) {\n    iocs.push({\n      ioc_type_id: 76,\n      ioc_value: alert.src_ip || alert.source_ip,\n      ioc_description: 'Source IP from alert',\n      ioc_tlp_id: 2,\n      ioc_tags: 'elk,auto-import'\n    });\n  }\n  \n  if (alert.dest_ip || alert.destination_ip) {\n    iocs.push({\n      ioc_type_id: 76,\n      ioc_value: alert.dest_ip || alert.destination_ip,\n      ioc_description: 'Destination IP from alert',\n      ioc_tlp_id: 2,\n      ioc_tags: 'elk,auto-import'\n    });\n  }\n  \n  if (alert.dns?.query || alert.query) {\n    iocs.push({\n      ioc_type_id: 9,\n      ioc_value: alert.dns?.query || alert.query,\n      ioc_description: 'DNS query from alert',\n      ioc_tlp_id: 2,\n      ioc_tags: 'elk,dns,auto-import'\n    });\n  }\n  \n  return {\n    case_id: irisCase.data?.case_id || irisCase.case_id,\n    iocs: iocs\n  };\n}}"
+      },
+      "id": "prepare-iocs",
+      "name": "Prepare IOCs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://localhost:8443/case/ioc/add/{{ $json.case_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { cid: $json.case_id, iocs: $json.iocs } }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 30000
+        }
+      },
+      "id": "add-iocs-to-case",
+      "name": "Add IOCs to Case",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iris-api",
+          "name": "IRIS API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://elasticsearch:9200/labsoc-iris-sync/_doc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"@timestamp\": new Date().toISOString(),\n  \"sync_type\": \"elk_to_iris\",\n  \"case_id\": $('Prepare IOCs').item.json.case_id,\n  \"alert_id\": $('ELK Alert Webhook').item.json.alert_id || $('ELK Alert Webhook').item.json._id,\n  \"iocs_added\": $('Prepare IOCs').item.json.iocs?.length || 0,\n  \"status\": \"synced\"\n} }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "log-sync-elk",
+      "name": "Log Sync to ELK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1520, 300],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "elasticsearch",
+          "name": "Elasticsearch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "success"
+            },
+            {
+              "name": "message",
+              "value": "=Case created in IRIS and synced with ELK"
+            }
+          ]
+        }
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1740, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "skip-response",
+              "name": "status",
+              "value": "skipped",
+              "type": "string"
+            },
+            {
+              "id": "skip-message",
+              "name": "message",
+              "value": "Alert severity below threshold - no case created",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "skip-response",
+      "name": "Skip Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [640, 500]
+    }
+  ],
+  "connections": {
+    "ELK Alert Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Alert Severity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Alert Severity": {
+      "main": [
+        [
+          {
+            "node": "Prepare IRIS Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare IRIS Case": {
+      "main": [
+        [
+          {
+            "node": "Create IRIS Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IRIS Case": {
+      "main": [
+        [
+          {
+            "node": "Prepare IOCs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare IOCs": {
+      "main": [
+        [
+          {
+            "node": "Add IOCs to Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add IOCs to Case": {
+      "main": [
+        [
+          {
+            "node": "Log Sync to ELK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Sync to ELK": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "DFIR"
+    },
+    {
+      "name": "IRIS"
+    },
+    {
+      "name": "ELK"
+    },
+    {
+      "name": "Integration"
+    }
+  ],
+  "meta": {
+    "templateId": "labsoc-elk-iris-integration"
+  }
+}

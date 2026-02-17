@@ -1,0 +1,6 @@
+{"index":{}}
+{"@timestamp":"2026-02-17T14:30:00.000Z","type":"conn","uid":"CYL5qT1nQePvYJUcK1","id_orig_h":"192.168.1.100","id_orig_p":54321,"id_resp_h":"45.33.32.156","id_resp_p":4444,"proto":"tcp","duration":120.5,"orig_bytes":50000,"resp_bytes":100000,"conn_state":"SF"}
+{"index":{}}
+{"@timestamp":"2026-02-17T14:31:00.000Z","type":"dns","uid":"CYL5qT1nQePvYJUcK4","id_orig_h":"192.168.1.100","id_orig_p":54321,"id_resp_h":"8.8.8.8","id_resp_p":53,"proto":"udp","query":"evil-c2.darknet.tk","qtype":"A","rcode":"NOERROR","answers":"45.33.32.156"}
+{"index":{}}
+{"@timestamp":"2026-02-17T14:32:00.000Z","type":"dns","uid":"CYL5qT1nQePvYJUcK5","id_orig_h":"10.0.0.50","id_orig_p":12346,"id_resp_h":"8.8.8.8","id_resp_p":53,"proto":"udp","query":"malware-download.evil.com","qtype":"A","rcode":"NOERROR","answers":"185.220.101.1"}
