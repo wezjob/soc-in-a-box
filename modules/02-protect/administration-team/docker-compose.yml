@@ -44,7 +44,10 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-KeycloakAdmin2026!}
       KC_PROXY: edge
       KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
       KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
     ports:
       - "8180:8080"  # Keycloak Admin Console
     networks:
@@ -107,6 +110,7 @@ services:
     environment:
       PUID: 1000
       PGID: 1000
+      HOMEPAGE_ALLOWED_HOSTS: localhost,127.0.0.1,192.168.*.*,10.*.*.*,labsoc-homepage
     volumes:
       - ./homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
