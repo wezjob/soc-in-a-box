@@ -1,0 +1,157 @@
+# SOC-in-a-Box - Homepage Configuration
+# Services organized by NIST CSF Functions
+
+---
+# CORE - SIEM & SOAR
+- CORE - SIEM & SOAR:
+    - Elasticsearch:
+        icon: elasticsearch.png
+        href: http://localhost:9200
+        description: Search & Analytics Engine
+        server: my-docker
+        container: labsoc-elasticsearch
+
+    - Kibana:
+        icon: kibana.png
+        href: http://localhost:5601
+        description: SIEM Dashboard
+        server: my-docker
+        container: labsoc-kibana
+
+    - n8n:
+        icon: n8n.png
+        href: http://localhost:5678
+        description: SOAR Automation
+        server: my-docker
+        container: labsoc-n8n
+
+    - IRIS DFIR:
+        icon: shield-check.png
+        href: https://localhost:8443
+        description: Incident Response Platform
+        server: my-docker
+        container: iriswebapp_nginx
+
+# DETECT - Observability
+- DETECT - Observability:
+    - Grafana:
+        icon: grafana.png
+        href: http://localhost:3000
+        description: Metrics & Dashboards
+        server: my-docker
+        container: labsoc-grafana
+
+    - Prometheus:
+        icon: prometheus.png
+        href: http://localhost:9090
+        description: Metrics Collection
+        server: my-docker
+        container: labsoc-prometheus
+
+    - Jaeger:
+        icon: jaeger.png
+        href: http://localhost:16686
+        description: Distributed Tracing
+        server: my-docker
+        container: labsoc-jaeger
+
+    - AlertManager:
+        icon: alertmanager.png
+        href: http://localhost:9093
+        description: Alert Routing
+        server: my-docker
+        container: labsoc-alertmanager
+
+# PROTECT - Security & Access
+- PROTECT - Access Control:
+    - Keycloak:
+        icon: keycloak.png
+        href: http://localhost:8180
+        description: SSO / Identity Provider
+        server: my-docker
+        container: labsoc-keycloak
+
+    - Vaultwarden:
+        icon: bitwarden.png
+        href: http://localhost:8085
+        description: Password Manager
+        server: my-docker
+        container: labsoc-vaultwarden
+
+    - Nginx Proxy Manager:
+        icon: nginx-proxy-manager.png
+        href: http://localhost:81
+        description: Reverse Proxy & SSL
+        server: my-docker
+        container: labsoc-nginx-proxy-manager
+
+# RESPOND - Vulnerability & Analysis
+- RESPOND - Analysis:
+    - OWASP ZAP:
+        icon: owasp.png
+        href: http://localhost:8090
+        description: Vulnerability Scanner
+        server: my-docker
+        container: labsoc-zap
+
+    - CyberChef:
+        icon: mdi-chef-hat-#4CAF50
+        href: http://localhost:8008
+        description: Data Analysis Tool
+        server: my-docker
+        container: labsoc-cyberchef
+
+    - Jupyter Notebook:
+        icon: jupyter.png
+        href: http://localhost:8888
+        description: Threat Hunting
+        server: my-docker
+        container: labsoc-jupyter-hunting
+
+# ADMIN - Administration
+- ADMIN - Management:
+    - Portainer:
+        icon: portainer.png
+        href: https://localhost:9443
+        description: Container Management
+        server: my-docker
+        container: labsoc-portainer
+
+    - Uptime Kuma:
+        icon: uptime-kuma.png
+        href: http://localhost:3001
+        description: Service Monitoring
+        server: my-docker
+        container: labsoc-uptime-kuma
+
+    - Dozzle:
+        icon: dozzle.png
+        href: http://localhost:8087
+        description: Docker Logs Viewer
+        server: my-docker
+        container: labsoc-dozzle
+
+# TOOLS - Collaboration
+- TOOLS - Collaboration:
+    - Excalidraw:
+        icon: excalidraw.png
+        href: http://localhost:8082
+        description: Whiteboard Diagrams
+        server: my-docker
+        container: labsoc-excalidraw
+
+    - Draw.io:
+        icon: diagrams-net.png
+        href: http://localhost:8086
+        description: Diagram Editor
+        server: my-docker
+        container: labsoc-drawio
+
+# DECEPTION - Honeypots
+- DECEPTION - Honeypots:
+    - Cowrie SSH:
+        icon: mdi-security-#FF5722
+        href: "#"
+        description: SSH/Telnet Honeypot (port 2222)
+        server: my-docker
+        container: labsoc-cowrie

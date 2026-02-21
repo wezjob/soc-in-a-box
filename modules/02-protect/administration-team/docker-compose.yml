@@ -1,0 +1,150 @@
+# ============================================================
+# MODULE: TEAM ADMINISTRATION & SSO
+# NIST Function: PROTECT (PR.AC - Access Control)
+# ============================================================
+# Components: Keycloak, Nginx Proxy Manager, Vaultwarden, Homepage, Dozzle
+# ============================================================
+
+services:
+  # ============================================================
+  # Keycloak - SSO / Identity Provider
+  # ============================================================
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: labsoc-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-KeycloakDB2026!}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    networks:
+      - labsoc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: labsoc-keycloak
+    restart: unless-stopped
+    command: start-dev
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-KeycloakDB2026!}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-KeycloakAdmin2026!}
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+    ports:
+      - "8180:8080"  # Keycloak Admin Console
+    networks:
+      - labsoc-network
+    labels:
+      - "labsoc.module=administration-team"
+      - "labsoc.nist=PROTECT"
+
+  # ============================================================
+  # Nginx Proxy Manager - Reverse Proxy with UI
+  # ============================================================
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: labsoc-nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+      - "81:81"      # Admin UI
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - labsoc-network
+    labels:
+      - "labsoc.module=administration-team"
+      - "labsoc.nist=PROTECT"
+
+  # ============================================================
+  # Vaultwarden - Password Manager (Bitwarden compatible)
+  # ============================================================
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: labsoc-vaultwarden
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${VAULTWARDEN_DOMAIN:-http://localhost:8085}
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:-VaultwardenAdmin2026!}
+      SIGNUPS_ALLOWED: true
+      INVITATIONS_ALLOWED: true
+      SHOW_PASSWORD_HINT: false
+      LOG_LEVEL: info
+    volumes:
+      - vaultwarden_data:/data
+    ports:
+      - "8085:80"  # Vaultwarden Web UI
+    networks:
+      - labsoc-network
+    labels:
+      - "labsoc.module=administration-team"
+      - "labsoc.nist=PROTECT"
+
+  # ============================================================
+  # Homepage - Dashboard for all services
+  # ============================================================
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: labsoc-homepage
+    restart: unless-stopped
+    environment:
+      PUID: 1000
+      PGID: 1000
+    volumes:
+      - ./homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "3003:3000"  # Homepage Dashboard
+    networks:
+      - labsoc-network
+    labels:
+      - "labsoc.module=administration-team"
+      - "labsoc.nist=PROTECT"
+
+  # ============================================================
+  # Dozzle - Real-time Docker Logs Viewer
+  # ============================================================
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: labsoc-dozzle
+    restart: unless-stopped
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+      DOZZLE_FILTER: "status=running"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8087:8080"  # Dozzle Web UI
+    networks:
+      - labsoc-network
+    labels:
+      - "labsoc.module=administration-team"
+      - "labsoc.nist=PROTECT"
+
+networks:
+  labsoc-network:
+    external: true
+
+volumes:
+  keycloak_db_data:
+  npm_data:
+  npm_letsencrypt:
+  vaultwarden_data:

@@ -1,0 +1,33 @@
+# Homepage Widgets
+---
+- greeting:
+    text_size: xl
+    text: "🛡️ SOC-in-a-Box"
+
+- datetime:
+    text_size: l
+    format:
+      dateStyle: long
+      timeStyle: short
+      hour12: false
+
+- search:
+    provider: google
+    target: _blank
+
+- resources:
+    label: System
+    cpu: true
+    memory: true
+    disk: /
+    uptime: true
+
+- docker:
+    server: my-docker
+    label: Containers
+
+- openmeteo:
+    label: Weather
+    latitude: 48.8566
+    longitude: 2.3522
+    units: metric

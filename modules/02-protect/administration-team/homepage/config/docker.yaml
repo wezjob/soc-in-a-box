@@ -1,0 +1,4 @@
+# Docker configuration for Homepage
+---
+my-docker:
+  socket: /var/run/docker.sock

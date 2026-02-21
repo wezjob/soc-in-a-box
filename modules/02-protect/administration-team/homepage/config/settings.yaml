@@ -1,0 +1,36 @@
+# Homepage Settings
+---
+title: SOC-in-a-Box
+favicon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/security.svg
+theme: dark
+color: gray
+background:
+  image: ""
+  blur: sm
+  saturate: 100
+  brightness: 50
+  opacity: 50
+
+headerStyle: boxed
+layout:
+  CORE - SIEM & SOAR:
+    style: row
+    columns: 4
+  DETECT - Observability:
+    style: row
+    columns: 4
+  PROTECT - Access Control:
+    style: row
+    columns: 3
+  RESPOND - Analysis:
+    style: row
+    columns: 3
+  ADMIN - Management:
+    style: row
+    columns: 3
+  TOOLS - Collaboration:
+    style: row
+    columns: 2
+  DECEPTION - Honeypots:
+    style: row
+    columns: 1

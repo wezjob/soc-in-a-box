@@ -1,0 +1,31 @@
+# Bookmarks - External Resources
+---
+- Documentation:
+    - NIST CSF:
+        - abbr: NIST
+          href: https://www.nist.gov/cyberframework
+    - MITRE ATT&CK:
+        - abbr: ATT&CK
+          href: https://attack.mitre.org/
+    - Sigma Rules:
+        - abbr: Sigma
+          href: https://github.com/SigmaHQ/sigma
+
+- Threat Intel:
+    - VirusTotal:
+        - abbr: VT
+          href: https://www.virustotal.com/
+    - AbuseIPDB:
+        - abbr: AbuseIP
+          href: https://www.abuseipdb.com/
+    - Shodan:
+        - abbr: Shodan
+          href: https://www.shodan.io/
+
+- Tools:
+    - CyberChef Online:
+        - abbr: CC
+          href: https://gchq.github.io/CyberChef/
+    - Regex101:
+        - abbr: Regex
+          href: https://regex101.com/
