@@ -94,3 +94,4 @@ build/
 # Environment variables - DO NOT COMMIT
 .env
 .env.local
+ssl/
